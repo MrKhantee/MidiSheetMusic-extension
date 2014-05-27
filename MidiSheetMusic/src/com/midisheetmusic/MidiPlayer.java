@@ -14,6 +14,8 @@ package com.midisheetmusic;
 
 import java.util.*;
 import java.io.*;
+
+import toneanalyze.SoundRecorder;
 import android.app.*;
 import android.content.*;
 import android.content.res.*;
@@ -55,6 +57,7 @@ import android.media.*;
 public class MidiPlayer extends LinearLayout {
     static Bitmap rewindImage;           /** The rewind image */
     static Bitmap playImage;             /** The play image */
+    static Bitmap recordImage;             /** The play image */
     static Bitmap pauseImage;            /** The pause image */
     static Bitmap stopImage;             /** The stop image */
     static Bitmap fastFwdImage;          /** The fast forward image */
@@ -63,6 +66,7 @@ public class MidiPlayer extends LinearLayout {
 
     private ImageButton rewindButton;    /** The rewind button */
     private ImageButton playButton;      /** The play/pause button */
+    private ImageButton recordButton;	 /** custom record button - for checking whether recorded tones match with the midi file **/
     private ImageButton stopButton;      /** The stop button */
     private ImageButton fastFwdButton;   /** The fast forward button */
     private ImageButton settingsButton;  /** The fast forward button */
@@ -100,6 +104,7 @@ public class MidiPlayer extends LinearLayout {
         Resources res = context.getResources();
         rewindImage = BitmapFactory.decodeResource(res, R.drawable.rewind);
         playImage = BitmapFactory.decodeResource(res, R.drawable.play);
+        recordImage = BitmapFactory.decodeResource(res, R.drawable.record);
         pauseImage = BitmapFactory.decodeResource(res, R.drawable.pause);
         stopImage = BitmapFactory.decodeResource(res, R.drawable.stop);
         fastFwdImage = BitmapFactory.decodeResource(res, R.drawable.fastforward);
@@ -206,6 +211,19 @@ public class MidiPlayer extends LinearLayout {
             }
         });
         this.addView(playButton);        
+        
+        /* Create the play button */
+        recordButton = new ImageButton(activity);
+        recordButton.setBackgroundColor(Color.BLACK);
+        recordButton.setImageBitmap(recordImage);
+        recordButton.setScaleType(ImageView.ScaleType.FIT_XY);
+        recordButton.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                Record();
+            }
+        });
+        this.addView(recordButton);        
+        
         
         /* Create the fastFwd button */        
         fastFwdButton = new ImageButton(activity);
@@ -469,6 +487,73 @@ public class MidiPlayer extends LinearLayout {
         timer.postDelayed(DoPlay, 1000);
     }
 
+    /** The callback for the play button.
+     *  If we're stopped or pause, then play the midi file.
+     */
+    private void Record() {
+        if (midifile == null || sheet == null || numberTracks() == 0) {
+            return;
+        }
+        else if (playstate == initStop || playstate == initPause || playstate == playing) {
+            return;
+        }
+        // playstate is stopped or paused
+
+        // Hide the midi player, wait a little for the view
+        // to refresh, and then start playing
+        this.setVisibility(View.GONE);
+        timer.removeCallbacks(TimerCallback);
+        timer.postDelayed(DoRecord, 1000);
+    }
+    
+    Runnable DoRecord = new Runnable() {
+        public void run() {
+          activity.getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+          /* The startPulseTime is the pulse time of the midi file when
+           * we first start playing the music.  It's used during shading.
+           */
+          if (options.playMeasuresInLoop) {
+              /* If we're playing measures in a loop, make sure the
+               * currentPulseTime is somewhere inside the loop measures.
+               */
+              int measure = (int)(currentPulseTime / midifile.getTime().getMeasure());
+              if ((measure < options.playMeasuresInLoopStart) ||
+                  (measure > options.playMeasuresInLoopEnd)) {
+                  currentPulseTime = options.playMeasuresInLoopStart * midifile.getTime().getMeasure();
+              }
+              startPulseTime = currentPulseTime;
+              options.pauseTime = (int)(currentPulseTime - options.shifttime);
+          }
+          else if (playstate == paused) {
+              startPulseTime = currentPulseTime;
+              options.pauseTime = (int)(currentPulseTime - options.shifttime);
+          }
+          else {
+              options.pauseTime = 0;
+              startPulseTime = options.shifttime;
+              currentPulseTime = options.shifttime;
+              prevPulseTime = options.shifttime - midifile.getTime().getQuarter();
+          }
+
+          CreateMidiFile();
+          playstate = playing;
+          PlaySound(tempSoundFile);
+          startTime = SystemClock.uptimeMillis();
+
+          SoundRecorder.getInstance().startRecording();
+          
+          timer.removeCallbacks(TimerCallback);
+          timer.removeCallbacks(ReShade);
+          timer.postDelayed(TimerCallback, 100);
+
+          sheet.ShadeNotes((int)currentPulseTime, (int)prevPulseTime, SheetMusic.GradualScroll);
+          piano.ShadeNotes((int)currentPulseTime, (int)prevPulseTime);
+          return;
+        }
+      };
+    
+      
     Runnable DoPlay = new Runnable() {
       public void run() {
         activity.getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);

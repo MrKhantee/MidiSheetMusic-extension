@@ -12,19 +12,33 @@
 
 package com.midisheetmusic;
 
-import java.io.*;
-import java.net.*;
-import android.app.*;
-import android.net.Uri;
-import android.os.*;
-import android.util.*;
-import android.widget.*;
-import android.view.*;
-import android.graphics.*;
-import android.content.*;
-import android.content.res.*;
-import android.media.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.zip.CRC32;
+
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.res.Configuration;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.media.MediaScannerConnection;
+import android.net.Uri;
+import android.os.Bundle;
+import android.os.Environment;
+import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
+import android.view.View;
+import android.widget.EditText;
+import android.widget.LinearLayout;
 
 /** @class SheetMusicActivity
  *
