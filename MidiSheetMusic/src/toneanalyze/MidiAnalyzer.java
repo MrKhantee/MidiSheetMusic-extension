@@ -1,5 +1,9 @@
 package toneanalyze;
 
+/**
+ * @author baran
+ * Class MidiAnalyzer can detect if frequency is equal or into toleration interval with frequency of midi note
+ */
 public class MidiAnalyzer {
 	private double[] table;
 	double a;
